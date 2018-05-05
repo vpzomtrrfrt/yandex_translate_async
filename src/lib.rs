@@ -9,15 +9,15 @@ extern crate futures;
 use futures::Future;
 use futures::Stream;
 
-pub struct Translate<'a> {
-    api_key: &'a str,
+pub struct Translate {
+    api_key: String,
     client: hyper::Client<hyper_tls::HttpsConnector<hyper::client::HttpConnector>>
 }
 
-impl<'a> Translate<'a> {
-    pub fn new<'n>(handle: &tokio_core::reactor::Handle, api_key: &'n str) -> Translate<'n> {
+impl Translate {
+    pub fn new(handle: &tokio_core::reactor::Handle, api_key: &str) -> Translate {
         Translate {
-            api_key,
+            api_key: api_key.to_owned(),
             client: hyper::Client::configure()
                     .connector(hyper_tls::HttpsConnector::new(4, handle).expect("Failed to initialize HttpsConnector"))
                     .build(handle)
