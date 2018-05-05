@@ -68,8 +68,20 @@ pub enum Error {
 
 impl std::fmt::Debug for Error {
     fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        std::fmt::Display::fmt(self, fmt)
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        write!(fmt, "{}", std::error::Error::description(self))
+    }
+}
+
+impl std::error::Error for Error {
+    fn description(&self) -> &str {
         match *self {
-            Error::Other(ref s) => write!(fmt, "{}", s)
+            Error::Other(ref x) => &x
         }
     }
 }
