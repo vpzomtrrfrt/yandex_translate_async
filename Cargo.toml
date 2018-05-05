@@ -2,6 +2,10 @@
 name = "yandex_translate_async"
 version = "0.1.0"
 authors = ["Colin Reeder <vpzomtrrfrt@gmail.com>"]
+license-file = "LICENSE"
+license = "GPL-3"
+description = "tokio-based wrapper for the Yandex.Translate API"
+repository = "https://github.com/vpzomtrrfrt/yandex_translate_async"
 
 [dependencies]
 hyper = "0.11.25"
