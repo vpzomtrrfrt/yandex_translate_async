@@ -1,5 +1,8 @@
 extern crate yandex_translate_async;
-extern crate tokio_core;
+extern crate tokio;
+extern crate futures;
+
+use futures::Future;
 
 fn main() {
     let mut args = std::env::args();
@@ -9,13 +12,11 @@ fn main() {
     let to = args.next().expect("Missing target language");
     let text = args.next().expect("Missing text");
 
-    let mut core = tokio_core::reactor::Core::new().unwrap();
+    let translator = yandex_translate_async::Translate::new(&key);
 
-    let handle = core.handle();
-
-    let translator = yandex_translate_async::Translate::new(&handle, &key);
-
-    let result = core.run(translator.translate(&text, &from, &to)).unwrap();
-
-    println!("{}", result);
+    tokio::run(translator.translate(&text, &from, &to)
+               .then(|res| -> Result<(), ()> {
+                   println!("{}", res.unwrap());
+                   std::process::exit(0);
+               }));
 }

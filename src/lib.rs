@@ -1,4 +1,3 @@
-extern crate tokio_core;
 extern crate hyper;
 extern crate hyper_tls;
 #[macro_use] extern crate serde_derive;
@@ -15,17 +14,16 @@ pub struct Translate {
 }
 
 impl Translate {
-    pub fn new(handle: &tokio_core::reactor::Handle, api_key: &str) -> Translate {
+    pub fn new(api_key: &str) -> Translate {
         Translate {
             api_key: api_key.to_owned(),
-            client: hyper::Client::configure()
-                    .connector(hyper_tls::HttpsConnector::new(4, handle).expect("Failed to initialize HttpsConnector"))
-                    .build(handle)
+            client: hyper::Client::builder()
+                    .build(hyper_tls::HttpsConnector::new(4).expect("Failed to initialize HttpsConnector"))
         }
     }
 
-    pub fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Box<Future<Item=String,Error=Error>> {
-        let uri = "https://translate.yandex.net/api/v1.5/tr.json/translate".parse().unwrap();
+    pub fn translate(&self, text: &str, from_lang: &str, to_lang: &str) -> Box<Future<Item=String,Error=Error> + Send> {
+        let uri = "https://translate.yandex.net/api/v1.5/tr.json/translate";
 
         let body = TranslateRequestBody {
             text: text.to_owned(),
@@ -39,15 +37,18 @@ impl Translate {
                         format!("Failed to serialize request body: {:?}", err))))
         };
 
-        let mut req = hyper::Request::new(hyper::Method::Post, uri);
-        req.headers_mut().set(hyper::header::ContentType::form_url_encoded());
-        req.headers_mut().set(hyper::header::ContentLength(body.len() as u64));
-        req.set_body(body);
+        let req = match hyper::Request::post(uri)
+            .header(hyper::header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .header(hyper::header::CONTENT_LENGTH, body.len() as u64)
+            .body(body.into()) {
+                Ok(x) => x,
+                Err(err) => return Box::new(futures::future::err(Error::Other(format!("Failed to construct request: {:?}", err))))
+            };
 
         Box::new(self.client.request(req)
                  .map_err(|e| Error::Other(format!("Failed to send request: {:?}", e)))
                  .and_then(|res| {
-                     res.body().concat2().map_err(|e| Error::Other(format!("Failed to get response: {:?}", e)))
+                     res.into_body().concat2().map_err(|e| Error::Other(format!("Failed to get response: {:?}", e)))
                  })
                  .and_then(|res| {
                      let result = serde_json::from_slice(&res);
